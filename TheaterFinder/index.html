@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+ 	<link href='https://fonts.googleapis.com/css?family=Coming+Soon' rel='stylesheet' type='text/css'>
+ 	<title>Movie Info and Theater Finder</title>
+ 	
+	<!-- Import jQuery -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+  <script>
+  "use strict";
+
+	//var MOVIE_DB_URL = "https://api.eventful.com/json/events/search?callback=jsonLoaded&app_key="
+	var MOVIE_DB_URL = "https://api.themoviedb.org/3/"
+	var MOVIE_DB_API_KEY = "e0aa106439b11db3286c25fdbb43eb4e";
+	var value;
+	var map;
+	var service;  //used in googleMap services API
+	var markers = [];
+	//window.onload = init;
+	
+	function initMap(){
+		document.querySelector("#searchMovie").onclick = getMovieData;
+		document.querySelector("#searchTheaters").onclick = getTheaterData;
+		
+		var mapOptions = {
+			center:{lat: 39.828127, lng: -98.579404},
+			zoom: 3
+		};
+		
+		map = new google.maps.Map(document.getElementById('mapDiv'),mapOptions);
+		
+		
+		//update text fields with locally stored variables if they exist
+		if(localStorage.getItem("lastMovieSearch") != null){
+			document.querySelector("#searchterm").value = localStorage.getItem("lastMovieSearch");
+		}
+		
+		if(localStorage.getItem("lastTheaterSearch") != null){
+			document.querySelector("#cityInput").value = localStorage.getItem("lastTheaterSearch");
+		}
+	
+	}
+	
+	function getTheaterData(){
+		service = new google.maps.places.PlacesService(map);
+		//service.radarSearch(request, getTheaterData);
+		var cityLat;
+		var cityLong;
+		var cityLatLongObject;
+		
+		var cityString = document.querySelector("#cityInput").value + ', us';
+			
+		//write value to local storage for future revisits
+		value =  document.querySelector("#cityInput").value;
+		localStorage.setItem("lastTheaterSearch", value);
+		
+		var geocoder =  new google.maps.Geocoder();
+		
+			//NOTE ==========Geocoder does not require encodedURI will brake code ==========
+		geocoder.geocode( { 'address': cityString}, function(results, status){
+			 if (status == google.maps.GeocoderStatus.OK) {
+				cityLat =  results[0].geometry.location.lat();
+				cityLong = results[0].geometry.location.lng();
+				cityLatLongObject = new google.maps.LatLng({lat: cityLat, lng: cityLong}); //lat and long combined into a LatLng objct for use in places API library
+			 }
+			 else{
+				 alert("Something went wrong.  Did you search for theaters in a valid US city? " + status);
+			 }
+		
+		var radarSearchRequest = {
+			location: cityLatLongObject,
+			radius: 50000,  //search zone radius from location in meters
+			type: "movie_theater"
+		}
+		
+		service.radarSearch(radarSearchRequest, displayTheaters);
+		
+		});	
+	}
+	
+	function displayTheaters(results, status){
+	  if (status !== google.maps.places.PlacesServiceStatus.OK) {
+          console.error(status);
+          return;
+        }
+		
+		//clear any current markers on the map
+		clearMarkers();
+		
+        for (var i = 0, result; result = results[i]; i++) {
+          addMarker(result);
+        }
+		
+		//zoomOnFirstResult();  Function call currently brakes Map
+	}
+	
+	function zoomOnFirstResult(){
+		if(markers.length == 0)return;
+		map.setCenter(markers[0].latitude, markers[0].longitude);
+		map.setZoom(9);
+	}
+	function getMovieData(){
+		// build up our URL string
+		var url = MOVIE_DB_URL; 
+		url += "search/movie?api_key=e0aa106439b11db3286c25fdbb43eb4e"
+		url += "&query=";
+		
+		// get value of form field
+		value = document.querySelector("#searchterm").value;
+		
+		//right value to local storage for future revisits
+		localStorage.setItem("lastMovieSearch", value);
+		
+		// get rid of any leading and trailing spaces
+		value = value.trim();
+		
+		// if there's no band to search then bail out of the function
+		if(value.length < 1) return;
+		
+		document.querySelector("#dynamicContent").innerHTML = "<b>Searching for " + value + "</b>";
+		
+		// replace spaces the user typed in the middle of the term with %20
+		// %20 is the hexadecimal value for a space
+		value = encodeURI(value); 
+		
+		// finally, add the artist name to the end of the string
+		url += value;
+		
+		//clearMarkers();
+		
+		// call the web service, and download the file
+		//console.log("loading " + url);
+		$("#content").fadeOut(2000);
+		$.ajax({
+		  dataType: "jsonp",
+		  url: url,
+		  data: null,
+		  success: loadedMovieJson
+		});
+
+	
+	}
+
+	function loadedMovieJson(obj){
+		//console.log("obj = " +obj);
+		//console.log("obj stringified = " + JSON.stringify(obj));
+		
+		// if there's an error, print a message and return
+		if(obj.error){
+			var status = obj.status;
+			var description = obj.description;
+			document.querySelector("#dynamicContent").innerHTML = "<h3><b>Error!</b></h3>" + "<p><i>" + status + "</i><p>" + "<p><i>" + description + "</i><p>";
+			$("#dynamicContent").fadeIn(500);
+			return; // Bail out
+		}
+		
+		// if there are no results, print a message and return
+		if(obj.total_items == 0){
+			var status = "No results found";
+			document.querySelector("#dynamicContent").innerHTML = "<p><i>" + status + "</i><p>" + "<p><i>";
+			$("#dynamicContent").fadeIn(500);
+			return; // Bail out
+		}
+		
+		
+		var bigString = "<p><b>There are " + obj.results.length + " movies that matched your search</b></p>";
+		bigString += "<hr />";
+		
+		for (var i = 0; i < obj.results.length; i++){
+			if(obj.results[i].poster_path != null && obj.results[i].poster_path != undefined){
+			    bigString+= ("<img src='https://image.tmdb.org/t/p/w500" + obj.results[i].poster_path + "' height='200' width='150'> <br>");
+				}
+				
+			if(obj.results[i].poster_path != null && obj.results[i].title != undefined){
+				bigString += "<p><b>Title: </b>" + obj.results[i].title + "</p>";
+				}
+				bigString += "<p><b>Release Date: </b>" + obj.results[i].release_date + "</p>";
+				bigString += "<p><b>Description: </b>" + obj.results[i].overview + "</p>";
+				bigString += "<p><b>Rateing: </b>" + obj.results[i].vote_average + "</p>";
+				
+				bigString += "<hr>";
+		}
+			bigString+= "</div>";
+		
+		document.querySelector("#dynamicContent").innerHTML = bigString;
+		$("#dynamicContent").fadeIn(500);
+	}	
+	
+	function clearMarkers(){
+			if(markers.length == 0 )return;
+			for (var i = 0; i < markers.length; i++){
+				markers[i].setMap(null);
+			}
+			markers = [];
+		}
+		
+	function addMarker(place) {
+        var marker = new google.maps.Marker({
+          map: map,
+          position: place.geometry.location,
+          icon: {
+            url: 'https://developers.google.com/maps/documentation/javascript/images/circle.png',
+            anchor: new google.maps.Point(10, 10),
+            scaledSize: new google.maps.Size(10, 17)
+          }
+        });
+		
+		markers.push(marker);
+	}
+	
+	/*function addMarker(latitude,longitude,title){
+		var position={lat:latitude,lng:longitude};
+		var marker=new google.maps.Marker({position:position,map:map});
+		marker.setTitle(title);
+		
+		//add click listener
+		google.maps.event.addListener(marker, 'click', function(e){
+			makeInfoWindow(this.position, this.title);
+		});
+		markers.push(marker);
+		};*/ 
+  
+  
+  </script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCo5TYeqr7L4JCjxiLkulCccOBSgAlwVw0&callback=initMap&libraries=places"
+    async defer></script>
+  <style>
+  @keyframes textShadowAnimation {
+    0%   {text-shadow: 0 0 10px #FF0;}
+    25% {text-shadow: 0 0 5px #FF0;}
+	50%   {text-shadow: 0 0 10px #FF0;}
+	75% {text-shadow: 0 0 5px #FF0;}
+	100%   {text-shadow: 0 0 10px #FF0;}
+}
+
+  	body{
+ 		font-family: "trebuchet ms", tahoma, verdana;
+				background-color: #665858;
+				color:white;
+ 	}
+ 	
+ 	h1{
+		margin: auto;
+ 		color:#e4685d;
+		text-shadow: 0 0 20px #FFF;
+		font-size:50px;
+		padding: 30px 0 0 10px;
+		background-repeat: no-repeat;
+		background-size:cover;
+		background-position:0-80px;
+		height:100px;
+		width:533px;
+		animation-name: textShadowAnimation;
+		animation-duration: 4s;
+		animation-iteration-count: infinite;
+ 	}
+ 	
+ 	.eventDiv{
+		margin: auto;
+ 		border-bottom:1px solid gray;
+ 	}
+ 	
+ 	#content{
+		margin: auto;
+ 		background-color:#FFF5EE;
+ 		min-height:500px;
+ 		padding:0 10px 10px 10px;
+ 		border:1px solid gray;
+ 	}
+ 	
+ 	#search{
+		margin: auto;
+ 		box-shadow:inset 0px 1px 0px 0px #f7c5c0;
+ 		background:linear-gradient(to bottom, #fc8d83 5%, #e4685d 100%);
+ 		background-color:#fc8d83;
+ 		border-radius:6px;
+ 		border:1px solid #d83526;
+ 		display:inline-block;
+ 		cursor:pointer;
+ 		color:#ffffff;
+ 		font-size:15px;
+ 		font-weight:bold;
+ 		padding:6px 24px;
+ 		text-decoration:none;
+ 		text-shadow:0px 1px 0px #b23e35;
+ 	}
+
+ 	
+ 	#search:hover {
+ 		background:linear-gradient(to bottom, #e4685d 5%, #fc8d83 100%);
+ 		background-color:#e4685d;
+ 	}
+
+ 	
+ 	#search:active {
+ 		position:relative;
+ 		top:1px;
+ 	}
+
+ 	
+ 	#searchterm{
+ 		font-size:16px;
+ 	}
+ 	
+ 	img{
+ 		padding:7px;
+ 		border:1px solid black;
+ 		background-color:white;
+ 	}
+	
+	#mapDiv{
+	margin: auto;
+	padding:0px;
+	width:542px;
+	height:300px;
+	border:1px solid black;
+	}
+	
+	#dynamicContent{
+	margin: auto;
+	padding:0px;
+	width:542px;
+	height:300px;
+	}
+	
+  </style>
+  
+</head>
+<body>
+
+<div  style ="margin: auto; width: 50%;">
+<h1>Munder Movie and Theater finder</h1><br>
+<p><i>Look up descriptions and ratings of movies.  Old movies, new movies, up and coming movies, any will work here.</i><br><br>  Need to find a theater for that up and coming movie that you just discovered?  We can find theaters in any US city, just input the city name and search away.</p>
+</div>
+<hr>
+<div style ="margin: auto; width: 50%;">
+<button type="button" id="searchMovie">Look up movie<br /></button>
+Movie Title:<input id="searchterm" type="text" size="20" maxlength="20" autofocus/> 
+<br><br>
+<button type="button" id="searchTheaters">Find Theaters by city<br /></button>
+City Name:<input id="cityInput" type="text" size="20" maxlength="20" autofocus/> <br>
+</div>
+<br>
+
+<div id="mapDiv"></div>
+<div style ="margin: auto; width: 50%;">
+<h2 style ="margin: auto; width: 50%;">Movie Info</h2>
+<div id="dynamicContent">
+<p>No data yet!  Fill out the Movie title field and press the "Look up Movie" button to begin a search</p>
+</div>
+</div>
+
+
+</body>
+</html>
