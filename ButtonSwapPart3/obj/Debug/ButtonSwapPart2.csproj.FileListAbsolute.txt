@@ -1,0 +1,14 @@
+C:\Users\Chris\Desktop\ButtonSwapPart2\bin\Debug\ButtonSwapPart1.exe.config
+C:\Users\Chris\Desktop\ButtonSwapPart2\obj\Debug\ButtonSwapPart1.exe
+C:\Users\Chris\Desktop\ButtonSwapPart2\obj\Debug\ButtonSwapPart1.pdb
+C:\Users\Chris\Desktop\ButtonSwapPart2\bin\Debug\ButtonSwapPart1.exe
+C:\Users\Chris\Desktop\ButtonSwapPart2\bin\Debug\ButtonSwapPart1.pdb
+C:\Users\Chris\Desktop\ButtonSwapPart2\obj\Debug\ButtonSwapPart2.csprojResolveAssemblyReference.cache
+C:\Users\Chris\Desktop\ButtonSwapPart2\obj\Debug\ButtonSwapPart1.GameButton.resources
+C:\Users\Chris\Desktop\ButtonSwapPart2\obj\Debug\ButtonSwapPart1.GameForm.resources
+C:\Users\Chris\Desktop\ButtonSwapPart2\obj\Debug\ButtonSwapPart1.Properties.Resources.resources
+C:\Users\Chris\Desktop\ButtonSwapPart2\obj\Debug\ButtonSwapPart1.StartForm.resources
+C:\Users\Chris\Desktop\ButtonSwapPart2\obj\Debug\ButtonSwapPart2.csproj.GenerateResource.Cache
+C:\Users\Chris\Desktop\ButtonSwapPart3\bin\Debug\ButtonSwapPart1.exe.config
+C:\Users\Chris\Desktop\ButtonSwapPart3\obj\Debug\ButtonSwapPart1.exe
+C:\Users\Chris\Desktop\ButtonSwapPart3\obj\Debug\ButtonSwapPart1.pdb
